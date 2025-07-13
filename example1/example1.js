@@ -112,6 +112,7 @@ function bezierSurface(u, v, controlPoints) {
 
 function generateBezierSurface(controlPoints, resolution) {
     const vertices = [];
+    const colors = []; // 색상 배열 추가
     const indices = [];
 
     for (let i = 0; i <= resolution; i++) {
@@ -119,6 +120,9 @@ function generateBezierSurface(controlPoints, resolution) {
         for (let j = 0; j <= resolution; j++) {
             const v = j / resolution;
             vertices.push(bezierSurface(u, v, controlPoints));
+
+            // 정점의 색상을 u, v 값에 따라 다르게 설정
+            colors.push([u, v, 1.0 - u - v, 1.0]); // RGBA 색상
         }
     }
 
@@ -134,11 +138,11 @@ function generateBezierSurface(controlPoints, resolution) {
         }
     }
 
-    return { vertices, indices };
+    return { vertices, colors, indices };
 }
 
 function updateSurface() {
-    const { vertices, indices } = generateBezierSurface(controlPoints, 20);
+    const { vertices, colors, indices } = generateBezierSurface(controlPoints, 20);
 
     // Load vertex data into GPU
     const vBuffer = gl.createBuffer();
@@ -148,6 +152,15 @@ function updateSurface() {
     const vPosition = gl.getAttribLocation(program, "vPosition");
     gl.vertexAttribPointer(vPosition, 3, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(vPosition);
+
+    // Load color data into GPU
+    const cBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(colors), gl.STATIC_DRAW);
+
+    const vColor = gl.getAttribLocation(program, "vColor");
+    gl.vertexAttribPointer(vColor, 4, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(vColor);
 
     // Load index data into GPU
     const iBuffer = gl.createBuffer();
