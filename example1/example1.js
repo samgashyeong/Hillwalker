@@ -1,19 +1,21 @@
 "use strict";
 
 var gl, program;
-var projectionMatrix, modelViewMatrix; // 전역 변수로 선언
-var projectionMatrixLoc, modelViewMatrixLoc; // 전역 변수로 선언
+var projectionMatrix, modelViewMatrix;
+var projectionMatrixLoc, modelViewMatrixLoc; 
+
+
 var controlPoints = [
-    [-1, -1, 0], // P00
-    [-1, 1, 0],  // P01
-    [1, -1, 0],  // P10
-    [1, 1, 2]    // P11
+    [[-1, -1, 0], [-1, -0.33, 0], [-1, 0.33, 0], [-1, 1, 0]],
+    [[-0.33, -1, 0], [-0.33, -0.33, 0], [-0.33, 0.33, 0], [-0.33, 1, 0]],
+    [[0.33, -1, 0], [0.33, -0.33, 0], [0.33, 0.33, 0], [0.33, 1, 0]],
+    [[1, -1, 0], [1, -0.33, 0], [1, 0.33, 0], [1, 1, 0]]
 ];
 
 // 카메라 관련 변수
-var cameraPosition = [0, 0, 3];
-var cameraTarget = [0, 0, 0];
-var cameraUp = [0, 1, 0];
+var cameraPosition = [0, 0, 3]; // 초기 카메라 위치
+var cameraTarget = [0, 0, 0];   // 카메라가 바라보는 대상
+var cameraUp = [0, 1, 0];       // 카메라의 상단 방향
 
 window.onload = function init()
 {
@@ -41,10 +43,9 @@ window.onload = function init()
     gl.uniformMatrix4fv(projectionMatrixLoc, false, flatten(projectionMatrix));
     gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(modelViewMatrix));
 
-    // Generate and render Bézier surface
     updateSurface();
 
-    // Add event listeners for sliders
+    
     document.querySelectorAll(".slider").forEach(slider => {
         slider.addEventListener("input", () => {
             updateControlPoints();
@@ -53,73 +54,59 @@ window.onload = function init()
         });
     });
 
-    // document.getElementById("centerHeight").addEventListener("input", () => {
-    //     const centerHeight = parseFloat(document.getElementById("centerHeight").value);
+    // 카메라 컨트롤 슬라이더 이벤트 리스너 추가
+    document.getElementById("cameraX").addEventListener("input", updateCameraPosition);
+    document.getElementById("cameraY").addEventListener("input", updateCameraPosition);
+    document.getElementById("cameraZ").addEventListener("input", updateCameraPosition);
 
-    //     // 중앙 높이를 조정하기 위해 모든 제어점의 Y값을 조정
-    //     controlPoints[0][1] = centerHeight / 2; // P00
-    //     controlPoints[1][1] = centerHeight;     // P01
-    //     controlPoints[2][1] = centerHeight / 2; // P10
-    //     controlPoints[3][1] = centerHeight;     // P11
-
-    //     updateSurface(); // 곡면 업데이트
-    // });
+    // 초기 렌더링
+    updateSurface();
 };
 
 
 function updateControlPoints() {
-    controlPoints[0] = [
-        parseFloat(document.getElementById("p00x").value),
-        parseFloat(document.getElementById("p00y").value),
-        parseFloat(document.getElementById("p00z").value)
-    ];
-    controlPoints[1] = [
-        parseFloat(document.getElementById("p01x").value),
-        parseFloat(document.getElementById("p01y").value),
-        parseFloat(document.getElementById("p01z").value)
-    ];
-    controlPoints[2] = [
-        parseFloat(document.getElementById("p10x").value),
-        parseFloat(document.getElementById("p10y").value),
-        parseFloat(document.getElementById("p10z").value)
-    ];
-    controlPoints[3] = [
-        parseFloat(document.getElementById("p11x").value),
-        parseFloat(document.getElementById("p11y").value),
-        parseFloat(document.getElementById("p11z").value)
-    ];
+    for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+            controlPoints[i][j] = [
+                parseFloat(document.getElementById(`p${i}${j}x`).value),
+                parseFloat(document.getElementById(`p${i}${j}y`).value),
+                parseFloat(document.getElementById(`p${i}${j}z`).value)
+            ];
+        }
+    }
+    updateSurface();
 }
 
 function updateCameraPosition() {
+    // 슬라이더 값을 읽어와 카메라 위치 업데이트
     cameraPosition[0] = parseFloat(document.getElementById("cameraX").value);
     cameraPosition[1] = parseFloat(document.getElementById("cameraY").value);
     cameraPosition[2] = parseFloat(document.getElementById("cameraZ").value);
 
+    // 카메라의 모델뷰 행렬 업데이트
     modelViewMatrix = lookAt(cameraPosition, cameraTarget, cameraUp);
     gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(modelViewMatrix));
+
+    // 곡면 다시 렌더링
+    updateSurface();
 }
 
 function bezierSurface(u, v, controlPoints) {
-    const p00 = controlPoints[0];
-    const p01 = controlPoints[1];
-    const p10 = controlPoints[2];
-    const p11 = controlPoints[3];
+    function bernstein(t, i) {
+        const binomial = [1, 3, 3, 1]; 
+        return binomial[i] * Math.pow(1 - t, 3 - i) * Math.pow(t, i);
+    }
 
-    const x = (1 - u) * (1 - v) * p00[0] +
-              (1 - u) * v * p01[0] +
-              u * (1 - v) * p10[0] +
-              u * v * p11[0];
-
-    const y = (1 - u) * (1 - v) * p00[1] +
-              (1 - u) * v * p01[1] +
-              u * (1 - v) * p10[1] +
-              u * v * p11[1];
-
-    const z = (1 - u) * (1 - v) * p00[2] +
-              (1 - u) * v * p01[2] +
-              u * (1 - v) * p10[2] +
-              u * v * p11[2];
-
+    let x = 0, y = 0, z = 0;
+    for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+            const bU = bernstein(u, i);
+            const bV = bernstein(v, j);
+            x += bU * bV * controlPoints[i][j][0];
+            y += bU * bV * controlPoints[i][j][1];
+            z += bU * bV * controlPoints[i][j][2];
+        }
+    }
     return [x, y, z];
 }
 

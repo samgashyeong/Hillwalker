@@ -58,7 +58,6 @@ Oops ... your browser doesn't support the HTML5 canvas element
 
 <div id="controls">
     <h3>Control Points</h3>
-    <!-- Control Points Sliders -->
     <div class="control-point">
         <label>P00 X: </label>
         <input type="range" id="p00x" class="slider" min="-2" max="2" step="0.1" value="-1">
@@ -71,13 +70,29 @@ Oops ... your browser doesn't support the HTML5 canvas element
         <label>P01 X: </label>
         <input type="range" id="p01x" class="slider" min="-2" max="2" step="0.1" value="-1">
         <label>Y: </label>
-        <input type="range" id="p01y" class="slider" min="-2" max="2" step="0.1" value="1">
+        <input type="range" id="p01y" class="slider" min="-2" max="2" step="0.1" value="-0.33">
         <label>Z: </label>
         <input type="range" id="p01z" class="slider" min="-2" max="2" step="0.1" value="0">
     </div>
     <div class="control-point">
+        <label>P02 X: </label>
+        <input type="range" id="p02x" class="slider" min="-2" max="2" step="0.1" value="-1">
+        <label>Y: </label>
+        <input type="range" id="p02y" class="slider" min="-2" max="2" step="0.1" value="0.33">
+        <label>Z: </label>
+        <input type="range" id="p02z" class="slider" min="-2" max="2" step="0.1" value="0">
+    </div>
+    <div class="control-point">
+        <label>P03 X: </label>
+        <input type="range" id="p03x" class="slider" min="-2" max="2" step="0.1" value="-1">
+        <label>Y: </label>
+        <input type="range" id="p03y" class="slider" min="-2" max="2" step="0.1" value="1">
+        <label>Z: </label>
+        <input type="range" id="p03z" class="slider" min="-2" max="2" step="0.1" value="0">
+    </div>
+    <div class="control-point">
         <label>P10 X: </label>
-        <input type="range" id="p10x" class="slider" min="-2" max="2" step="0.1" value="1">
+        <input type="range" id="p10x" class="slider" min="-2" max="2" step="0.1" value="-0.33">
         <label>Y: </label>
         <input type="range" id="p10y" class="slider" min="-2" max="2" step="0.1" value="-1">
         <label>Z: </label>
@@ -85,26 +100,101 @@ Oops ... your browser doesn't support the HTML5 canvas element
     </div>
     <div class="control-point">
         <label>P11 X: </label>
-        <input type="range" id="p11x" class="slider" min="-2" max="2" step="0.1" value="1">
+        <input type="range" id="p11x" class="slider" min="-2" max="2" step="0.1" value="-0.33">
         <label>Y: </label>
-        <input type="range" id="p11y" class="slider" min="-2" max="2" step="0.1" value="1">
+        <input type="range" id="p11y" class="slider" min="-2" max="2" step="0.1" value="-0.33">
         <label>Z: </label>
         <input type="range" id="p11z" class="slider" min="-2" max="2" step="0.1" value="0">
     </div>
     <div class="control-point">
-        <label>Center Height: </label>
-        <input type="range" id="centerHeight" class="slider" min="0" max="5" step="0.1" value="2">
+        <label>P12 X: </label>
+        <input type="range" id="p12x" class="slider" min="-2" max="2" step="0.1" value="-0.33">
+        <label>Y: </label>
+        <input type="range" id="p12y" class="slider" min="-2" max="2" step="0.1" value="0.33">
+        <label>Z: </label>
+        <input type="range" id="p12z" class="slider" min="-2" max="2" step="0.1" value="0">
+    </div>
+    <div class="control-point">
+        <label>P13 X: </label>
+        <input type="range" id="p13x" class="slider" min="-2" max="2" step="0.1" value="-0.33">
+        <label>Y: </label>
+        <input type="range" id="p13y" class="slider" min="-2" max="2" step="0.1" value="1">
+        <label>Z: </label>
+        <input type="range" id="p13z" class="slider" min="-2" max="2" step="0.1" value="0">
+    </div>
+    <div class="control-point">
+        <label>P20 X: </label>
+        <input type="range" id="p20x" class="slider" min="-2" max="2" step="0.1" value="0.33">
+        <label>Y: </label>
+        <input type="range" id="p20y" class="slider" min="-2" max="2" step="0.1" value="-1">
+        <label>Z: </label>
+        <input type="range" id="p20z" class="slider" min="-2" max="2" step="0.1" value="0">
+    </div>
+    <div class="control-point">
+        <label>P21 X: </label>
+        <input type="range" id="p21x" class="slider" min="-2" max="2" step="0.1" value="0.33">
+        <label>Y: </label>
+        <input type="range" id="p21y" class="slider" min="-2" max="2" step="0.1" value="-0.33">
+        <label>Z: </label>
+        <input type="range" id="p21z" class="slider" min="-2" max="2" step="0.1" value="0">
+    </div>
+    <div class="control-point">
+        <label>P22 X: </label>
+        <input type="range" id="p22x" class="slider" min="-2" max="2" step="0.1" value="0.33">
+        <label>Y: </label>
+        <input type="range" id="p22y" class="slider" min="-2" max="2" step="0.1" value="0.33">
+        <label>Z: </label>
+        <input type="range" id="p22z" class="slider" min="-2" max="2" step="0.1" value="0">
+    </div>
+    <div class="control-point">
+        <label>P23 X: </label>
+        <input type="range" id="p23x" class="slider" min="-2" max="2" step="0.1" value="0.33">
+        <label>Y: </label>
+        <input type="range" id="p23y" class="slider" min="-2" max="2" step="0.1" value="1">
+        <label>Z: </label>
+        <input type="range" id="p23z" class="slider" min="-2" max="2" step="0.1" value="0">
+    </div>
+    <div class="control-point">
+        <label>P30 X: </label>
+        <input type="range" id="p30x" class="slider" min="-2" max="2" step="0.1" value="1">
+        <label>Y: </label>
+        <input type="range" id="p30y" class="slider" min="-2" max="2" step="0.1" value="-1">
+        <label>Z: </label>
+        <input type="range" id="p30z" class="slider" min="-2" max="2" step="0.1" value="0">
+    </div>
+    <div class="control-point">
+        <label>P31 X: </label>
+        <input type="range" id="p31x" class="slider" min="-2" max="2" step="0.1" value="1">
+        <label>Y: </label>
+        <input type="range" id="p31y" class="slider" min="-2" max="2" step="0.1" value="-0.33">
+        <label>Z: </label>
+        <input type="range" id="p31z" class="slider" min="-2" max="2" step="0.1" value="0">
+    </div>
+    <div class="control-point">
+        <label>P32 X: </label>
+        <input type="range" id="p32x" class="slider" min="-2" max="2" step="0.1" value="1">
+        <label>Y: </label>
+        <input type="range" id="p32y" class="slider" min="-2" max="2" step="0.1" value="0.33">
+        <label>Z: </label>
+        <input type="range" id="p32z" class="slider" min="-2" max="2" step="0.1" value="0">
+    </div>
+    <div class="control-point">
+        <label>P33 X: </label>
+        <input type="range" id="p33x" class="slider" min="-2" max="2" step="0.1" value="1">
+        <label>Y: </label>
+        <input type="range" id="p33y" class="slider" min="-2" max="2" step="0.1" value="1">
+        <label>Z: </label>
+        <input type="range" id="p33z" class="slider" min="-2" max="2" step="0.1" value="0">
     </div>
 
     <h3>Camera Controls</h3>
-    <!-- Camera Position Sliders -->
     <div class="camera-control">
         <label>Camera X: </label>
-        <input type="range" id="cameraX" class="slider" min="-5" max="5" step="0.1" value="0">
+        <input type="range" id="cameraX" class="slider" min="-20" max="20" step="0.1" value="0">
     </div>
     <div class="camera-control">
         <label>Camera Y: </label>
-        <input type="range" id="cameraY" class="slider" min="-5" max="5" step="0.1" value="0">
+        <input type="range" id="cameraY" class="slider" min="-20" max="20" step="0.1" value="0">
     </div>
     <div class="camera-control">
         <label>Camera Z: </label>
@@ -112,12 +202,5 @@ Oops ... your browser doesn't support the HTML5 canvas element
     </div>
 </div>
 
-<script>
-document.getElementById("centerHeight").addEventListener("input", () => {
-    const centerHeight = parseFloat(document.getElementById("centerHeight").value);
-    controlPoints[3][1] = centerHeight; // 중앙 제어점의 Y값을 업데이트
-    updateSurface(); // 곡면 업데이트
-});
-</script>
 </body>
 </html>
