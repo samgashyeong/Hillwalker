@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html>
-<head>
-<meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
-<title>Bézier Surface Example</title>
 
-<script id="vertex-shader" type="x-shader/x-vertex">
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+    <title>Bézier Surface Example</title>
+
+    <script id="vertex-shader" type="x-shader/x-vertex">
     attribute vec4 vPosition;
     attribute vec4 vColor; // 색상 속성 추가
     varying vec4 fColor;   // 프래그먼트 셰이더로 전달할 색상
@@ -18,7 +19,7 @@
     }
 </script>
 
-<script id="fragment-shader" type="x-shader/x-fragment">
+    <script id="fragment-shader" type="x-shader/x-fragment">
     precision mediump float;
 
     varying vec4 fColor; // 버텍스 셰이더에서 전달받은 색상
@@ -28,183 +29,240 @@
     }
 </script>
 
-<script type="text/javascript" src="../Common/webgl-utils.js"></script>
-<script type="text/javascript" src="../Common/initShaders.js"></script>
-<script type="text/javascript" src="../Common/MV.js"></script>
-<script type="text/javascript" src="example1.js"></script>
+    <script type="text/javascript" src="../Common/webgl-utils.js"></script>
+    <script type="text/javascript" src="../Common/initShaders.js"></script>
+    <script type="text/javascript" src="../Common/MV.js"></script>
+    <script type="text/javascript" src="example1.js"></script>
 
-<style>
-    body {
-        display: flex;
-        flex-direction: row;
-        margin: 0;
-        font-family: Arial, sans-serif;
-    }
-    canvas {
-        border: 1px solid black;
-    }
-    #controls {
-        margin-left: 20px;
-    }
-    .control-point, .camera-control {
-        margin-bottom: 20px;
-    }
-    .slider {
-        width: 200px;
-    }
-</style>
+    <style>
+        body {
+            display: flex;
+            flex-direction: row;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            height: 100vh; /* 전체 뷰포트 높이 사용 */
+            overflow: hidden; /* 전체 페이지 스크롤 방지 */
+        }
+
+        canvas {
+            border: 1px solid black;
+            cursor: crosshair;
+            width: 512px;
+            height: 512px;
+            flex-shrink: 0; /* flex로 인한 크기 변경 방지 */
+        }
+
+        #controls {
+            margin-left: 20px;
+            flex: 1; /* 남은 공간 모두 사용 */
+            overflow-y: auto; /* 세로 스크롤만 허용 */
+            max-height: 100vh; /* 최대 높이를 뷰포트 높이로 제한 */
+            padding-right: 20px; /* 스크롤바와의 간격 */
+        }
+
+        .control-point,
+        .camera-control,
+        .ray-casting {
+            margin-bottom: 20px;
+        }
+
+        .slider {
+            width: 200px;
+        }
+
+        #intersection-info {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        #intersection-info p {
+            margin: 5px 0;
+        }
+    </style>
 </head>
 
 <body>
-<canvas id="gl-canvas" width="512" height="512">
-Oops ... your browser doesn't support the HTML5 canvas element
-</canvas>
+    <canvas id="gl-canvas" width="512" height="512">
+        Oops ... your browser doesn't support the HTML5 canvas element
+    </canvas>
 
-<div id="controls">
-    <h3>Control Points</h3>
-    <div class="control-point">
-        <label>P00 X: </label>
-        <input type="range" id="p00x" class="slider" min="-2" max="2" step="0.1" value="-1">
-        <label>Y: </label>
-        <input type="range" id="p00y" class="slider" min="-2" max="2" step="0.1" value="-1">
-        <label>Z: </label>
-        <input type="range" id="p00z" class="slider" min="-2" max="2" step="0.1" value="0">
-    </div>
-    <div class="control-point">
-        <label>P01 X: </label>
-        <input type="range" id="p01x" class="slider" min="-2" max="2" step="0.1" value="-1">
-        <label>Y: </label>
-        <input type="range" id="p01y" class="slider" min="-2" max="2" step="0.1" value="-0.33">
-        <label>Z: </label>
-        <input type="range" id="p01z" class="slider" min="-2" max="2" step="0.1" value="0">
-    </div>
-    <div class="control-point">
-        <label>P02 X: </label>
-        <input type="range" id="p02x" class="slider" min="-2" max="2" step="0.1" value="-1">
-        <label>Y: </label>
-        <input type="range" id="p02y" class="slider" min="-2" max="2" step="0.1" value="0.33">
-        <label>Z: </label>
-        <input type="range" id="p02z" class="slider" min="-2" max="2" step="0.1" value="0">
-    </div>
-    <div class="control-point">
-        <label>P03 X: </label>
-        <input type="range" id="p03x" class="slider" min="-2" max="2" step="0.1" value="-1">
-        <label>Y: </label>
-        <input type="range" id="p03y" class="slider" min="-2" max="2" step="0.1" value="1">
-        <label>Z: </label>
-        <input type="range" id="p03z" class="slider" min="-2" max="2" step="0.1" value="0">
-    </div>
-    <div class="control-point">
-        <label>P10 X: </label>
-        <input type="range" id="p10x" class="slider" min="-2" max="2" step="0.1" value="-0.33">
-        <label>Y: </label>
-        <input type="range" id="p10y" class="slider" min="-2" max="2" step="0.1" value="-1">
-        <label>Z: </label>
-        <input type="range" id="p10z" class="slider" min="-2" max="2" step="0.1" value="0">
-    </div>
-    <div class="control-point">
-        <label>P11 X: </label>
-        <input type="range" id="p11x" class="slider" min="-2" max="2" step="0.1" value="-0.33">
-        <label>Y: </label>
-        <input type="range" id="p11y" class="slider" min="-2" max="2" step="0.1" value="-0.33">
-        <label>Z: </label>
-        <input type="range" id="p11z" class="slider" min="-2" max="2" step="0.1" value="0">
-    </div>
-    <div class="control-point">
-        <label>P12 X: </label>
-        <input type="range" id="p12x" class="slider" min="-2" max="2" step="0.1" value="-0.33">
-        <label>Y: </label>
-        <input type="range" id="p12y" class="slider" min="-2" max="2" step="0.1" value="0.33">
-        <label>Z: </label>
-        <input type="range" id="p12z" class="slider" min="-2" max="2" step="0.1" value="0">
-    </div>
-    <div class="control-point">
-        <label>P13 X: </label>
-        <input type="range" id="p13x" class="slider" min="-2" max="2" step="0.1" value="-0.33">
-        <label>Y: </label>
-        <input type="range" id="p13y" class="slider" min="-2" max="2" step="0.1" value="1">
-        <label>Z: </label>
-        <input type="range" id="p13z" class="slider" min="-2" max="2" step="0.1" value="0">
-    </div>
-    <div class="control-point">
-        <label>P20 X: </label>
-        <input type="range" id="p20x" class="slider" min="-2" max="2" step="0.1" value="0.33">
-        <label>Y: </label>
-        <input type="range" id="p20y" class="slider" min="-2" max="2" step="0.1" value="-1">
-        <label>Z: </label>
-        <input type="range" id="p20z" class="slider" min="-2" max="2" step="0.1" value="0">
-    </div>
-    <div class="control-point">
-        <label>P21 X: </label>
-        <input type="range" id="p21x" class="slider" min="-2" max="2" step="0.1" value="0.33">
-        <label>Y: </label>
-        <input type="range" id="p21y" class="slider" min="-2" max="2" step="0.1" value="-0.33">
-        <label>Z: </label>
-        <input type="range" id="p21z" class="slider" min="-2" max="2" step="0.1" value="0">
-    </div>
-    <div class="control-point">
-        <label>P22 X: </label>
-        <input type="range" id="p22x" class="slider" min="-2" max="2" step="0.1" value="0.33">
-        <label>Y: </label>
-        <input type="range" id="p22y" class="slider" min="-2" max="2" step="0.1" value="0.33">
-        <label>Z: </label>
-        <input type="range" id="p22z" class="slider" min="-2" max="2" step="0.1" value="0">
-    </div>
-    <div class="control-point">
-        <label>P23 X: </label>
-        <input type="range" id="p23x" class="slider" min="-2" max="2" step="0.1" value="0.33">
-        <label>Y: </label>
-        <input type="range" id="p23y" class="slider" min="-2" max="2" step="0.1" value="1">
-        <label>Z: </label>
-        <input type="range" id="p23z" class="slider" min="-2" max="2" step="0.1" value="0">
-    </div>
-    <div class="control-point">
-        <label>P30 X: </label>
-        <input type="range" id="p30x" class="slider" min="-2" max="2" step="0.1" value="1">
-        <label>Y: </label>
-        <input type="range" id="p30y" class="slider" min="-2" max="2" step="0.1" value="-1">
-        <label>Z: </label>
-        <input type="range" id="p30z" class="slider" min="-2" max="2" step="0.1" value="0">
-    </div>
-    <div class="control-point">
-        <label>P31 X: </label>
-        <input type="range" id="p31x" class="slider" min="-2" max="2" step="0.1" value="1">
-        <label>Y: </label>
-        <input type="range" id="p31y" class="slider" min="-2" max="2" step="0.1" value="-0.33">
-        <label>Z: </label>
-        <input type="range" id="p31z" class="slider" min="-2" max="2" step="0.1" value="0">
-    </div>
-    <div class="control-point">
-        <label>P32 X: </label>
-        <input type="range" id="p32x" class="slider" min="-2" max="2" step="0.1" value="1">
-        <label>Y: </label>
-        <input type="range" id="p32y" class="slider" min="-2" max="2" step="0.1" value="0.33">
-        <label>Z: </label>
-        <input type="range" id="p32z" class="slider" min="-2" max="2" step="0.1" value="0">
-    </div>
-    <div class="control-point">
-        <label>P33 X: </label>
-        <input type="range" id="p33x" class="slider" min="-2" max="2" step="0.1" value="1">
-        <label>Y: </label>
-        <input type="range" id="p33y" class="slider" min="-2" max="2" step="0.1" value="1">
-        <label>Z: </label>
-        <input type="range" id="p33z" class="slider" min="-2" max="2" step="0.1" value="0">
-    </div>
+    <div id="controls">
+        <h3>Control Points</h3>
+        <div class="control-point">
+            <label>P00 X: </label>
+            <input type="range" id="p00x" class="slider" min="-2" max="2" step="0.1" value="-1">
+            <label>Y: </label>
+            <input type="range" id="p00y" class="slider" min="-2" max="2" step="0.1" value="0">
+            <label>Z: </label>
+            <input type="range" id="p00z" class="slider" min="-2" max="2" step="0.1" value="-1">
+        </div>
 
-    <h3>Camera Controls</h3>
-    <div class="camera-control">
-        <label>Camera X: </label>
-        <input type="range" id="cameraX" class="slider" min="-20" max="20" step="0.1" value="0">
+        <div class="control-point">
+            <label>P01 X: </label>
+            <input type="range" id="p01x" class="slider" min="-2" max="2" step="0.1" value="-1">
+            <label>Y: </label>
+            <input type="range" id="p01y" class="slider" min="-2" max="2" step="0.1" value="0">
+            <label>Z: </label>
+            <input type="range" id="p01z" class="slider" min="-2" max="2" step="0.1" value="-0.33">
+        </div>
+
+        <div class="control-point">
+            <label>P02 X: </label>
+            <input type="range" id="p02x" class="slider" min="-2" max="2" step="0.1" value="-1">
+            <label>Y: </label>
+            <input type="range" id="p02y" class="slider" min="-2" max="2" step="0.1" value="0">
+            <label>Z: </label>
+            <input type="range" id="p02z" class="slider" min="-2" max="2" step="0.1" value="0.33">
+        </div>
+
+        <div class="control-point">
+            <label>P03 X: </label>
+            <input type="range" id="p03x" class="slider" min="-2" max="2" step="0.1" value="-1">
+            <label>Y: </label>
+            <input type="range" id="p03y" class="slider" min="-2" max="2" step="0.1" value="0">
+            <label>Z: </label>
+            <input type="range" id="p03z" class="slider" min="-2" max="2" step="0.1" value="1">
+        </div>
+
+        <div class="control-point">
+            <label>P10 X: </label>
+            <input type="range" id="p10x" class="slider" min="-2" max="2" step="0.1" value="-0.33">
+            <label>Y: </label>
+            <input type="range" id="p10y" class="slider" min="-2" max="2" step="0.1" value="0">
+            <label>Z: </label>
+            <input type="range" id="p10z" class="slider" min="-2" max="2" step="0.1" value="-1">
+        </div>
+
+        <div class="control-point">
+            <label>P11 X: </label>
+            <input type="range" id="p11x" class="slider" min="-2" max="2" step="0.1" value="-0.33">
+            <label>Y: </label>
+            <input type="range" id="p11y" class="slider" min="-2" max="2" step="0.1" value="0">
+            <label>Z: </label>
+            <input type="range" id="p11z" class="slider" min="-2" max="2" step="0.1" value="-0.33">
+        </div>
+
+        <div class="control-point">
+            <label>P12 X: </label>
+            <input type="range" id="p12x" class="slider" min="-2" max="2" step="0.1" value="-0.33">
+            <label>Y: </label>
+            <input type="range" id="p12y" class="slider" min="-2" max="2" step="0.1" value="0">
+            <label>Z: </label>
+            <input type="range" id="p12z" class="slider" min="-2" max="2" step="0.1" value="0.33">
+        </div>
+
+        <div class="control-point">
+            <label>P13 X: </label>
+            <input type="range" id="p13x" class="slider" min="-2" max="2" step="0.1" value="-0.33">
+            <label>Y: </label>
+            <input type="range" id="p13y" class="slider" min="-2" max="2" step="0.1" value="0">
+            <label>Z: </label>
+            <input type="range" id="p13z" class="slider" min="-2" max="2" step="0.1" value="1">
+        </div>
+
+        <div class="control-point">
+            <label>P20 X: </label>
+            <input type="range" id="p20x" class="slider" min="-2" max="2" step="0.1" value="0.33">
+            <label>Y: </label>
+            <input type="range" id="p20y" class="slider" min="-2" max="2" step="0.1" value="0">
+            <label>Z: </label>
+            <input type="range" id="p20z" class="slider" min="-2" max="2" step="0.1" value="-1">
+        </div>
+
+        <div class="control-point">
+            <label>P21 X: </label>
+            <input type="range" id="p21x" class="slider" min="-2" max="2" step="0.1" value="0.33">
+            <label>Y: </label>
+            <input type="range" id="p21y" class="slider" min="-2" max="2" step="0.1" value="0">
+            <label>Z: </label>
+            <input type="range" id="p21z" class="slider" min="-2" max="2" step="0.1" value="-0.33">
+        </div>
+
+        <div class="control-point">
+            <label>P22 X: </label>
+            <input type="range" id="p22x" class="slider" min="-2" max="2" step="0.1" value="0.33">
+            <label>Y: </label>
+            <input type="range" id="p22y" class="slider" min="-2" max="2" step="0.1" value="0">
+            <label>Z: </label>
+            <input type="range" id="p22z" class="slider" min="-2" max="2" step="0.1" value="0.33">
+        </div>
+
+        <div class="control-point">
+            <label>P23 X: </label>
+            <input type="range" id="p23x" class="slider" min="-2" max="2" step="0.1" value="0.33">
+            <label>Y: </label>
+            <input type="range" id="p23y" class="slider" min="-2" max="2" step="0.1" value="0">
+            <label>Z: </label>
+            <input type="range" id="p23z" class="slider" min="-2" max="2" step="0.1" value="1">
+        </div>
+
+        <div class="control-point">
+            <label>P30 X: </label>
+            <input type="range" id="p30x" class="slider" min="-2" max="2" step="0.1" value="1">
+            <label>Y: </label>
+            <input type="range" id="p30y" class="slider" min="-2" max="2" step="0.1" value="0">
+            <label>Z: </label>
+            <input type="range" id="p30z" class="slider" min="-2" max="2" step="0.1" value="-1">
+        </div>
+
+        <div class="control-point">
+            <label>P31 X: </label>
+            <input type="range" id="p31x" class="slider" min="-2" max="2" step="0.1" value="1">
+            <label>Y: </label>
+            <input type="range" id="p31y" class="slider" min="-2" max="2" step="0.1" value="0">
+            <label>Z: </label>
+            <input type="range" id="p31z" class="slider" min="-2" max="2" step="0.1" value="-0.33">
+        </div>
+
+        <div class="control-point">
+            <label>P32 X: </label>
+            <input type="range" id="p32x" class="slider" min="-2" max="2" step="0.1" value="1">
+            <label>Y: </label>
+            <input type="range" id="p32y" class="slider" min="-2" max="2" step="0.1" value="0">
+            <label>Z: </label>
+            <input type="range" id="p32z" class="slider" min="-2" max="2" step="0.1" value="0.33">
+        </div>
+
+        <div class="control-point">
+            <label>P33 X: </label>
+            <input type="range" id="p33x" class="slider" min="-2" max="2" step="0.1" value="1">
+            <label>Y: </label>
+            <input type="range" id="p33y" class="slider" min="-2" max="2" step="0.1" value="0">
+            <label>Z: </label>
+            <input type="range" id="p33z" class="slider" min="-2" max="2" step="0.1" value="1">
+        </div>
+
+
+        <h3>Camera Controls</h3>
+        <div class="camera-control">
+            <label>Camera X: </label>
+            <input type="range" id="cameraX" class="slider" min="-20" max="20" step="0.1" value="0">
+        </div>
+        <div class="camera-control">
+            <label>Camera Y: </label>
+            <input type="range" id="cameraY" class="slider" min="-20" max="20" step="0.1" value="2">
+        </div>
+        <div class="camera-control">
+            <label>Camera Z: </label>
+            <input type="range" id="cameraZ" class="slider" min="1" max="10" step="0.1" value="3">
+        </div>
+
+        <h3>Ray Casting</h3>
+        <div class="ray-casting">
+            <p>캔버스를 클릭하여 곡면과의 교점을 찾아보세요</p>
+            <div id="intersection-info">
+                <p><strong>교점 정보:</strong></p>
+                <p>X: <span id="intersect-x">-</span></p>
+                <p>Y: <span id="intersect-y">-</span></p>
+                <p>Z: <span id="intersect-z">-</span></p>
+                <p>U: <span id="intersect-u">-</span></p>
+                <p>V: <span id="intersect-v">-</span></p>
+            </div>
+        </div>
     </div>
-    <div class="camera-control">
-        <label>Camera Y: </label>
-        <input type="range" id="cameraY" class="slider" min="-20" max="20" step="0.1" value="0">
-    </div>
-    <div class="camera-control">
-        <label>Camera Z: </label>
-        <input type="range" id="cameraZ" class="slider" min="1" max="10" step="0.1" value="3">
-    </div>
-</div>
 
 </body>
+
 </html>
