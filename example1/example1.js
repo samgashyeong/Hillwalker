@@ -25,6 +25,13 @@ let hasMarker = false;
 let rayVertices = [];
 let hasRay = false;
 
+// 마커 애니메이션 관련 변수
+let currentMarkerPosition = [0, 0, 0];
+let targetMarkerPosition = [0, 0, 0];
+let isAnimating = false;
+let animationProgress = 0;
+let animationSpeed = 0.02; // 애니메이션 속도
+
 // 카메라 관련 변수
 var cameraPosition = [0, 2, 2]; // 초기 카메라 위치 - Y를 2로 올려서 비스듬한 각도로
 var cameraTarget = [0, 0, 0];   // 카메라가 바라보는 대상
@@ -73,6 +80,15 @@ window.onload = function init() {
 
     // 초기 렌더링
     updateSurface();
+
+    // 초기 마커를 곡면 중앙에 생성
+    createInitialMarker();
+    
+    // 마커가 포함된 화면 다시 렌더링
+    updateSurface();
+
+    // 애니메이션 루프 시작
+    startAnimationLoop();
 
     // 마우스 클릭 이벤트 리스너 추가 (ray casting)
     canvas.addEventListener("click", handleCanvasClick);
@@ -205,12 +221,16 @@ function render(indexCount) {
 }
 
 function renderMarker() {
-    // 마커용 검은색 색상 배열 생성
+    // 마커용 검은색 색상 배열 생성 (8개 꼭짓점)
     const markerColors = [
-        [0.0, 0.0, 0.0, 1.0], // 검은색
-        [0.0, 0.0, 0.0, 1.0],
-        [0.0, 0.0, 0.0, 1.0],
-        [0.0, 0.0, 0.0, 1.0]
+        [0.0, 0.0, 0.0, 1.0], // 0: 검은색
+        [0.0, 0.0, 0.0, 1.0], // 1: 검은색
+        [0.0, 0.0, 0.0, 1.0], // 2: 검은색
+        [0.0, 0.0, 0.0, 1.0], // 3: 검은색
+        [0.0, 0.0, 0.0, 1.0], // 4: 검은색
+        [0.0, 0.0, 0.0, 1.0], // 5: 검은색
+        [0.0, 0.0, 0.0, 1.0], // 6: 검은색
+        [0.0, 0.0, 0.0, 1.0]  // 7: 검은색
     ];
     
     // 마커 꼭짓점 버퍼 설정
@@ -276,7 +296,9 @@ function handleCanvasClick(event) {
 
     if (closest) {
         console.log("✅ HIT! Intersection at:", closest.point);
-        createMarkerAtPoint(closest.point);
+        
+        // 애니메이션 시작
+        startMarkerAnimation(closest.point);
     } else {
         console.log("❌ No intersection found");
     }
@@ -408,18 +430,35 @@ function createMarkerAtPoint(point) {
     const size = 0.08;
     const halfSize = size / 2;
     
-    // 정사각형 꼭짓점 (XZ 평면상에서, Y는 교점 높이)
+    // 정육면체의 8개 꼭짓점
     markerVertices = [
-        [point[0] - halfSize, point[1], point[2] - halfSize], // 왼쪽 아래
-        [point[0] + halfSize, point[1], point[2] - halfSize], // 오른쪽 아래
-        [point[0] + halfSize, point[1], point[2] + halfSize], // 오른쪽 위
-        [point[0] - halfSize, point[1], point[2] + halfSize]  // 왼쪽 위
+        // 앞면 (z + halfSize)
+        [point[0] - halfSize, point[1] - halfSize, point[2] + halfSize], // 0: 왼쪽 아래 앞
+        [point[0] + halfSize, point[1] - halfSize, point[2] + halfSize], // 1: 오른쪽 아래 앞
+        [point[0] + halfSize, point[1] + halfSize, point[2] + halfSize], // 2: 오른쪽 위 앞
+        [point[0] - halfSize, point[1] + halfSize, point[2] + halfSize], // 3: 왼쪽 위 앞
+        
+        // 뒷면 (z - halfSize)
+        [point[0] - halfSize, point[1] - halfSize, point[2] - halfSize], // 4: 왼쪽 아래 뒤
+        [point[0] + halfSize, point[1] - halfSize, point[2] - halfSize], // 5: 오른쪽 아래 뒤
+        [point[0] + halfSize, point[1] + halfSize, point[2] - halfSize], // 6: 오른쪽 위 뒤
+        [point[0] - halfSize, point[1] + halfSize, point[2] - halfSize]  // 7: 왼쪽 위 뒤
     ];
     
-    // 삼각형 인덱스 (두 개의 삼각형으로 사각형 구성)
+    // 정육면체의 12개 삼각형 (6면 × 2삼각형)
     markerIndices = [
-        0, 1, 2,  // 첫 번째 삼각형
-        0, 2, 3   // 두 번째 삼각형
+        // 앞면
+        0, 1, 2,  0, 2, 3,
+        // 뒷면
+        4, 6, 5,  4, 7, 6,
+        // 왼쪽면
+        4, 0, 3,  4, 3, 7,
+        // 오른쪽면
+        1, 5, 6,  1, 6, 2,
+        // 윗면
+        3, 2, 6,  3, 6, 7,
+        // 아랫면
+        4, 5, 1,  4, 1, 0
     ];
     
     hasMarker = true;
@@ -473,4 +512,114 @@ function renderRay() {
 
     // Ray를 선으로 렌더링 (인덱스 버퍼 없이 직접 그리기)
     gl.drawArrays(gl.LINES, 0, 2);
+}
+
+// 초기 마커 생성 함수
+function createInitialMarker() {
+    // 베지어 곡면의 중앙점 계산 (u=0.5, v=0.5)
+    const centerPoint = bezierSurface(0.5, 0.5, controlPoints);
+    
+    console.log("Initial marker created at surface center:", centerPoint);
+    
+    // 현재 마커 위치 설정
+    currentMarkerPosition = [...centerPoint];
+    targetMarkerPosition = [...centerPoint];
+    
+    // 중앙점에 마커 생성
+    createMarkerAtPoint(centerPoint);
+}
+
+// 마커 애니메이션 시작 함수
+function startMarkerAnimation(targetPoint) {
+    targetMarkerPosition = [...targetPoint];
+    isAnimating = true;
+    animationProgress = 0;
+    
+    console.log("Animation started from:", currentMarkerPosition, "to:", targetMarkerPosition);
+}
+
+// 애니메이션 루프 함수
+function startAnimationLoop() {
+    function animate() {
+        if (isAnimating) {
+            updateMarkerAnimation();
+        }
+        requestAnimationFrame(animate);
+    }
+    animate();
+}
+
+// 마커 애니메이션 업데이트 함수
+function updateMarkerAnimation() {
+    if (!isAnimating) return;
+    
+    animationProgress += animationSpeed;
+    
+    if (animationProgress >= 1.0) {
+        // 애니메이션 완료
+        animationProgress = 1.0;
+        isAnimating = false;
+        currentMarkerPosition = [...targetMarkerPosition];
+        createMarkerAtPoint(currentMarkerPosition);
+    } else {
+        // 곡면을 따라 이동하는 경로 계산
+        const surfacePoint = calculateSurfacePathPoint(animationProgress);
+        currentMarkerPosition = [...surfacePoint];
+        createMarkerAtPoint(currentMarkerPosition);
+    }
+    
+    updateSurface();
+}
+
+// 곡면을 따라 이동하는 경로상의 점 계산
+function calculateSurfacePathPoint(progress) {
+    // ease-out 효과 적용
+    const easeProgress = 1 - Math.pow(1 - progress, 3);
+    
+    // 현재 위치와 목표 위치의 UV 좌표를 찾아서 보간
+    const startUV = findUVFromPoint(currentMarkerPosition);
+    const endUV = findUVFromPoint(targetMarkerPosition);
+    
+    // UV 좌표 보간
+    const currentU = lerp(startUV.u, endUV.u, easeProgress);
+    const currentV = lerp(startUV.v, endUV.v, easeProgress);
+    
+    // 보간된 UV 좌표로 곡면상의 점 계산
+    return bezierSurface(currentU, currentV, controlPoints);
+}
+
+// 3D 점에서 가장 가까운 UV 좌표 찾기 (근사값)
+function findUVFromPoint(point) {
+    let closestU = 0.5;
+    let closestV = 0.5;
+    let minDistance = Infinity;
+    
+    // 그리드 서치로 가장 가까운 UV 찾기
+    const resolution = 20;
+    for (let i = 0; i <= resolution; i++) {
+        const u = i / resolution;
+        for (let j = 0; j <= resolution; j++) {
+            const v = j / resolution;
+            const surfacePoint = bezierSurface(u, v, controlPoints);
+            
+            const distance = Math.sqrt(
+                Math.pow(point[0] - surfacePoint[0], 2) +
+                Math.pow(point[1] - surfacePoint[1], 2) +
+                Math.pow(point[2] - surfacePoint[2], 2)
+            );
+            
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestU = u;
+                closestV = v;
+            }
+        }
+    }
+    
+    return { u: closestU, v: closestV };
+}
+
+// 선형 보간 함수
+function lerp(start, end, progress) {
+    return start + (end - start) * progress;
 }
