@@ -30,7 +30,7 @@ let currentMarkerPosition = [0, 0, 0];
 let targetMarkerPosition = [0, 0, 0];
 let isAnimating = false;
 let animationProgress = 0;
-let animationSpeed = 0.02; // 애니메이션 속도
+let animationSpeed = 0.001; // 애니메이션 속도
 
 // 카메라 관련 변수
 var cameraPosition = [0, 2, 2]; // 초기 카메라 위치 - Y를 2로 올려서 비스듬한 각도로
@@ -353,78 +353,6 @@ function getRayFromMouse(ndcX, ndcY, projectionMatrix, viewMatrix) {
 }
 
 
-// 행렬 * 벡터
-function multiplyMatrixAndPoint(m, p) {
-    const out = new Array(4).fill(0);
-    for (let row = 0; row < 4; row++) {
-        for (let col = 0; col < 4; col++) {
-            out[row] += m[row * 4 + col] * p[col];
-        }
-    }
-    console.log("multiplyMatrixAndPoint result:", out);
-    return out;
-}
-
-// 정규화 함수
-function normalize(v) {
-    const len = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-    return [v[0] / len, v[1] / len, v[2] / len];
-}
-
-function rayIntersectsTriangle(origin, direction, v0, v1, v2) {
-    const EPSILON = 0.00001;
-
-    const edge1 = subtract(v1, v0);
-    const edge2 = subtract(v2, v0);
-    const h = cross(direction, edge2);
-    const a = dot(edge1, h);
-    if (Math.abs(a) < EPSILON) return null; // 평행함
-
-    const f = 1.0 / a;
-    const s = subtract(origin, v0);
-    const u = f * dot(s, h);
-    if (u < 0.0 || u > 1.0) return null;
-
-    const q = cross(s, edge1);
-    const v = f * dot(direction, q);
-    if (v < 0.0 || u + v > 1.0) return null;
-
-    const t = f * dot(edge2, q);
-    if (t > EPSILON) {
-        return {
-            point: [
-                origin[0] + direction[0] * t,
-                origin[1] + direction[1] * t,
-                origin[2] + direction[2] * t
-            ],
-            distance: t
-        };
-    }
-
-    return null;
-}
-
-// 벡터 보조 함수들
-function subtract(a, b) {
-    if (a.length === 3) {
-        return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-    } else {
-        return [a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3] - b[3]];
-    }
-}
-
-function dot(a, b) {
-    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
-
-function cross(a, b) {
-    return [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0]
-    ];
-}
-
 // 마커 생성 함수
 function createMarkerAtPoint(point) {
     const size = 0.08;
@@ -529,97 +457,4 @@ function createInitialMarker() {
     createMarkerAtPoint(centerPoint);
 }
 
-// 마커 애니메이션 시작 함수
-function startMarkerAnimation(targetPoint) {
-    targetMarkerPosition = [...targetPoint];
-    isAnimating = true;
-    animationProgress = 0;
-    
-    console.log("Animation started from:", currentMarkerPosition, "to:", targetMarkerPosition);
-}
 
-// 애니메이션 루프 함수
-function startAnimationLoop() {
-    function animate() {
-        if (isAnimating) {
-            updateMarkerAnimation();
-        }
-        requestAnimationFrame(animate);
-    }
-    animate();
-}
-
-// 마커 애니메이션 업데이트 함수
-function updateMarkerAnimation() {
-    if (!isAnimating) return;
-    
-    animationProgress += animationSpeed;
-    
-    if (animationProgress >= 1.0) {
-        // 애니메이션 완료
-        animationProgress = 1.0;
-        isAnimating = false;
-        currentMarkerPosition = [...targetMarkerPosition];
-        createMarkerAtPoint(currentMarkerPosition);
-    } else {
-        // 곡면을 따라 이동하는 경로 계산
-        const surfacePoint = calculateSurfacePathPoint(animationProgress);
-        currentMarkerPosition = [...surfacePoint];
-        createMarkerAtPoint(currentMarkerPosition);
-    }
-    
-    updateSurface();
-}
-
-// 곡면을 따라 이동하는 경로상의 점 계산
-function calculateSurfacePathPoint(progress) {
-    // ease-out 효과 적용
-    const easeProgress = 1 - Math.pow(1 - progress, 3);
-    
-    // 현재 위치와 목표 위치의 UV 좌표를 찾아서 보간
-    const startUV = findUVFromPoint(currentMarkerPosition);
-    const endUV = findUVFromPoint(targetMarkerPosition);
-    
-    // UV 좌표 보간
-    const currentU = lerp(startUV.u, endUV.u, easeProgress);
-    const currentV = lerp(startUV.v, endUV.v, easeProgress);
-    
-    // 보간된 UV 좌표로 곡면상의 점 계산
-    return bezierSurface(currentU, currentV, controlPoints);
-}
-
-// 3D 점에서 가장 가까운 UV 좌표 찾기 (근사값)
-function findUVFromPoint(point) {
-    let closestU = 0.5;
-    let closestV = 0.5;
-    let minDistance = Infinity;
-    
-    // 그리드 서치로 가장 가까운 UV 찾기
-    const resolution = 20;
-    for (let i = 0; i <= resolution; i++) {
-        const u = i / resolution;
-        for (let j = 0; j <= resolution; j++) {
-            const v = j / resolution;
-            const surfacePoint = bezierSurface(u, v, controlPoints);
-            
-            const distance = Math.sqrt(
-                Math.pow(point[0] - surfacePoint[0], 2) +
-                Math.pow(point[1] - surfacePoint[1], 2) +
-                Math.pow(point[2] - surfacePoint[2], 2)
-            );
-            
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestU = u;
-                closestV = v;
-            }
-        }
-    }
-    
-    return { u: closestU, v: closestV };
-}
-
-// 선형 보간 함수
-function lerp(start, end, progress) {
-    return start + (end - start) * progress;
-}
