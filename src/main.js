@@ -13,11 +13,6 @@ var controlPoints = [
 ];
 
 
-// WebGL 버퍼들을 재사용하기 위한 변수들
-let surfaceVBuffer, surfaceCBuffer, surfaceIBuffer;
-let markerVBuffer, markerCBuffer, markerIBuffer;
-let rayVBuffer, rayCBuffer;
-
 let surfaceVertices = [];
 let surfaceIndices = [];
 
@@ -35,7 +30,7 @@ let currentMarkerPosition = [0, 0, 0];
 let targetMarkerPosition = [0, 0, 0];
 let isAnimating = false;
 let animationProgress = 0;
-let animationSpeed = 0.1; // 애니메이션 속도
+let animationSpeed = 0.001; // 애니메이션 속도
 
 // 카메라 관련 변수
 var cameraPosition = [0, 2, 2]; // 초기 카메라 위치 - Y를 2로 올려서 비스듬한 각도로
@@ -74,7 +69,7 @@ window.onload = function init() {
         slider.addEventListener("input", () => {
             updateControlPoints();
             updateCameraPosition();
-            // updateSurface는 updateControlPoints에서 이미 호출됨 - 중복 제거
+            updateSurface();
         });
     });
 
@@ -89,8 +84,11 @@ window.onload = function init() {
     // 초기 마커를 곡면 중앙에 생성
     createInitialMarker();
     
-    // 최종 렌더링 (중복 updateSurface 제거)
+    // 마커가 포함된 화면 다시 렌더링
     updateSurface();
+
+    // 애니메이션 루프 시작
+    startAnimationLoop();
 
     // 마우스 클릭 이벤트 리스너 추가 (ray casting)
     canvas.addEventListener("click", handleCanvasClick);
@@ -180,13 +178,9 @@ function updateSurface() {
     surfaceVertices = vertices;
     surfaceIndices = indices;
     
-    // 버퍼가 없으면 생성, 있으면 재사용
-    if (!surfaceVBuffer) surfaceVBuffer = gl.createBuffer();
-    if (!surfaceCBuffer) surfaceCBuffer = gl.createBuffer();
-    if (!surfaceIBuffer) surfaceIBuffer = gl.createBuffer();
-    
     // Load vertex data into GPU
-    gl.bindBuffer(gl.ARRAY_BUFFER, surfaceVBuffer);
+    const vBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.STATIC_DRAW);
 
     const vPosition = gl.getAttribLocation(program, "vPosition");
@@ -194,7 +188,8 @@ function updateSurface() {
     gl.enableVertexAttribArray(vPosition);
 
     // Load color data into GPU
-    gl.bindBuffer(gl.ARRAY_BUFFER, surfaceCBuffer);
+    const cBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(colors), gl.STATIC_DRAW);
 
     const vColor = gl.getAttribLocation(program, "vColor");
@@ -202,10 +197,11 @@ function updateSurface() {
     gl.enableVertexAttribArray(vColor);
 
     // Load index data into GPU
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, surfaceIBuffer);
+    const iBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, iBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 
-    // 렌더링
+    // 먼저 곡면 렌더링
     render(indices.length);
     
     // Ray가 있으면 ray도 렌더링
@@ -225,20 +221,20 @@ function render(indexCount) {
 }
 
 function renderMarker() {
-    if (!hasMarker) return;
-    
     // 마커용 검은색 색상 배열 생성 (8개 꼭짓점)
     const markerColors = [
-        [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0],
-        [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0]
+        [0.0, 0.0, 0.0, 1.0], // 0: 검은색
+        [0.0, 0.0, 0.0, 1.0], // 1: 검은색
+        [0.0, 0.0, 0.0, 1.0], // 2: 검은색
+        [0.0, 0.0, 0.0, 1.0], // 3: 검은색
+        [0.0, 0.0, 0.0, 1.0], // 4: 검은색
+        [0.0, 0.0, 0.0, 1.0], // 5: 검은색
+        [0.0, 0.0, 0.0, 1.0], // 6: 검은색
+        [0.0, 0.0, 0.0, 1.0]  // 7: 검은색
     ];
     
-    // 버퍼 재사용
-    if (!markerVBuffer) markerVBuffer = gl.createBuffer();
-    if (!markerCBuffer) markerCBuffer = gl.createBuffer();
-    if (!markerIBuffer) markerIBuffer = gl.createBuffer();
-    
     // 마커 꼭짓점 버퍼 설정
+    const markerVBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, markerVBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(markerVertices), gl.STATIC_DRAW);
 
@@ -247,6 +243,7 @@ function renderMarker() {
     gl.enableVertexAttribArray(vPosition);
 
     // 마커 색상 버퍼 설정
+    const markerCBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, markerCBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(markerColors), gl.STATIC_DRAW);
 
@@ -255,6 +252,7 @@ function renderMarker() {
     gl.enableVertexAttribArray(vColor);
 
     // 마커 인덱스 버퍼 설정
+    const markerIBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, markerIBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(markerIndices), gl.STATIC_DRAW);
 
@@ -299,10 +297,8 @@ function handleCanvasClick(event) {
     if (closest) {
         console.log("✅ HIT! Intersection at:", closest.point);
         
-        // 마커를 바로 해당 위치로 이동
-        currentMarkerPosition = [...closest.point];
-        targetMarkerPosition = [...closest.point];
-        createMarkerAtPoint(closest.point);
+        // 애니메이션 시작
+        startMarkerAnimation(closest.point);
     } else {
         console.log("❌ No intersection found");
     }
@@ -354,42 +350,6 @@ function getRayFromMouse(ndcX, ndcY, projectionMatrix, viewMatrix) {
         origin: cameraWorldPos,
         direction: direction
     };
-}
-
-// Möller-Trumbore ray-triangle intersection algorithm
-function rayIntersectsTriangle(rayOrigin, rayDirection, v0, v1, v2) {
-    const EPSILON = 0.0000001;
-    
-    const edge1 = subtract(v1, v0);
-    const edge2 = subtract(v2, v0);
-    const h = cross(rayDirection, edge2);
-    const a = dot(edge1, h);
-    
-    if (a > -EPSILON && a < EPSILON) return null; // Ray parallel to triangle
-    
-    const f = 1.0 / a;
-    const s = subtract(rayOrigin, v0);
-    const u = f * dot(s, h);
-    
-    if (u < 0.0 || u > 1.0) return null;
-    
-    const q = cross(s, edge1);
-    const v = f * dot(rayDirection, q);
-    
-    if (v < 0.0 || u + v > 1.0) return null;
-    
-    const t = f * dot(edge2, q);
-    
-    if (t > EPSILON) {
-        const hitPoint = [
-            rayOrigin[0] + rayDirection[0] * t,
-            rayOrigin[1] + rayDirection[1] * t,
-            rayOrigin[2] + rayDirection[2] * t
-        ];
-        return { point: hitPoint, distance: t };
-    }
-    
-    return null;
 }
 
 
@@ -454,19 +414,14 @@ function createRayVisualization(origin, direction) {
 
 // Ray 렌더링 함수
 function renderRay() {
-    if (!hasRay) return;
-    
     // Ray용 빨간색 색상 배열 생성
     const rayColors = [
         [1.0, 0.0, 0.0, 1.0], // 빨간색 - 시작점
         [1.0, 0.0, 0.0, 1.0]  // 빨간색 - 끝점
     ];
     
-    // 버퍼 재사용
-    if (!rayVBuffer) rayVBuffer = gl.createBuffer();
-    if (!rayCBuffer) rayCBuffer = gl.createBuffer();
-    
     // Ray 꼭짓점 버퍼 설정
+    const rayVBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, rayVBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(rayVertices), gl.STATIC_DRAW);
 
@@ -475,6 +430,7 @@ function renderRay() {
     gl.enableVertexAttribArray(vPosition);
 
     // Ray 색상 버퍼 설정
+    const rayCBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, rayCBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(rayColors), gl.STATIC_DRAW);
 
