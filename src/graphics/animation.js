@@ -8,12 +8,7 @@ function startMarkerAnimation(targetPoint) {
     isAnimating = true;
     animationProgress = 0;
     
-    // 시작 시 경로를 미리 계산해서 저장
-    precomputedPath = calculateOptimalSurfacePath(currentMarkerPosition, targetMarkerPosition);
-    pathLength = calculatePathLength(precomputedPath);
-    
     console.log("Animation started from:", currentMarkerPosition, "to:", targetMarkerPosition);
-    console.log("Path calculated with", precomputedPath.length, "points, length:", pathLength);
 }
 
 
@@ -31,7 +26,7 @@ function startAnimationLoop() {
 function updateMarkerAnimation() {
     if (!isAnimating) return;
 
-    // 애니메이션 진행 (더 부드러운 속도)
+    // 애니메이션 진행
     animationProgress += animationSpeed;
 
     if (animationProgress >= 1.0) {
@@ -41,8 +36,8 @@ function updateMarkerAnimation() {
         currentMarkerPosition = [...targetMarkerPosition];
         createMarkerAtPoint(currentMarkerPosition);
     } else {
-        // 미리 계산된 경로를 따라 이동
-        const surfacePoint = getPointOnPrecomputedPath(animationProgress);
+        // 직선 경로 + 곡면 높이 조정 방식
+        const surfacePoint = calculateLinearPathWithSurfaceHeight(animationProgress);
         currentMarkerPosition = [...surfacePoint];
         createMarkerAtPoint(currentMarkerPosition);
     }
@@ -54,8 +49,8 @@ function updateMarkerAnimation() {
 function getPointOnPrecomputedPath(progress) {
     if (precomputedPath.length === 0) return currentMarkerPosition;
     
-    // Ease-out 곡선 적용 (더 자연스러운 감속)
-    const easeProgress = easeOutCubic(progress);
+    // 단순 선형 진행 (ease-out 제거)
+    const easeProgress = progress;
     
     // 경로 상의 정확한 인덱스 계산
     const totalIndex = easeProgress * (precomputedPath.length - 1);
@@ -77,42 +72,44 @@ function getPointOnPrecomputedPath(progress) {
     ];
 }
 
-// 개선된 곡면 경로 계산 (한 번만 계산)
-function calculateOptimalSurfacePath(startPoint, endPoint) {
-    const startUV = findUVFromPoint(startPoint);
-    const endUV = findUVFromPoint(endPoint);
-    const path = [];
+function calculateLinearPathWithSurfaceHeight(progress) {
+    // 단순 선형 보간으로 XZ 좌표 계산 (smoothStep 제거)
+    const x = lerp(currentMarkerPosition[0], targetMarkerPosition[0], progress);
+    const z = lerp(currentMarkerPosition[2], targetMarkerPosition[2], progress);
+
+    // (x, z)에 해당하는 곡면의 Y 좌표를 찾기 위해서 가장 가까운 UV를 찾음
+    const uv = findUVFromXZ(x, z);
+    const surfacePoint = bezierSurface(uv.u, uv.v, controlPoints);
     
-    // 더 많은 세그먼트로 부드러운 경로
-    const segments = 50;
-    
-    for (let i = 0; i <= segments; i++) {
-        const t = i / segments;
-        
-        // 자연스러운 곡선 경로 (Catmull-Rom spline 스타일)
-        let u, v;
-        
-        if (Math.abs(startUV.u - endUV.u) > Math.abs(startUV.v - endUV.v)) {
-            // U 방향이 더 긴 경우 - U를 주축으로
-            u = smoothStep(startUV.u, endUV.u, t);
-            v = smoothStep(startUV.v, endUV.v, t) + 
-                0.05 * Math.sin(Math.PI * t) * Math.abs(endUV.u - startUV.u);
-        } else {
-            // V 방향이 더 긴 경우 - V를 주축으로
-            v = smoothStep(startUV.v, endUV.v, t);
-            u = smoothStep(startUV.u, endUV.u, t) + 
-                0.05 * Math.sin(Math.PI * t) * Math.abs(endUV.v - startUV.v);
+    // 높이는 곡면의 Y 좌표로 대체
+    const y = surfacePoint[1];
+
+    return [x, y, z];
+}
+
+function findUVFromXZ(x, z) {
+    let closestU = 0.5, closestV = 0.5;
+    let minDistance = Infinity;
+    const resolution = 150;
+
+    for (let i = 0; i <= resolution; i++) {
+        const u = i / resolution;
+        for (let j = 0; j <= resolution; j++) {
+            const v = j / resolution;
+            const point = bezierSurface(u, v, controlPoints);
+            const dx = x - point[0];
+            const dz = z - point[2];
+            const dist = dx * dx + dz * dz;
+
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestU = u;
+                closestV = v;
+            }
         }
-        
-        // UV 좌표를 [0,1] 범위로 클램핑
-        u = Math.max(0, Math.min(1, u));
-        v = Math.max(0, Math.min(1, v));
-        
-        const surfacePoint = bezierSurface(u, v, controlPoints);
-        path.push(surfacePoint);
     }
-    
-    return path;
+
+    return { u: closestU, v: closestV };
 }
 
 // 부드러운 보간 함수 (smoothstep)
