@@ -30,7 +30,7 @@ let currentMarkerPosition = [0, 0, 0];
 let targetMarkerPosition = [0, 0, 0];
 let isAnimating = false;
 let animationProgress = 0;
-let animationSpeed = 0.001; // 애니메이션 속도
+let animationSpeed = 0.01; // 애니메이션 속도
 
 // 카메라 관련 변수
 var cameraPosition = [0, 2, 2]; // 초기 카메라 위치 - Y를 2로 올려서 비스듬한 각도로

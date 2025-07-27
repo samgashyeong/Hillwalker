@@ -69,3 +69,11 @@ function cross(a, b) {
         a[0] * b[1] - a[1] * b[0]
     ];
 }
+
+
+function calculateDistance(a, b) {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const dz = b[2] - a[2];
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+}
