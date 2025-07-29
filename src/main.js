@@ -78,6 +78,9 @@ window.onload = function init() {
     document.getElementById("cameraY").addEventListener("input", updateCameraPosition);
     document.getElementById("cameraZ").addEventListener("input", updateCameraPosition);
 
+    // 기울기 제어 슬라이더 이벤트 리스너 추가
+    document.getElementById("slopeThreshold").addEventListener("input", updateSlopeThreshold);
+
     // 초기 렌더링
     updateSurface();
 
@@ -120,6 +123,17 @@ function updateCameraPosition() {
 
     // 곡면 다시 렌더링
     updateSurface();
+}
+
+function updateSlopeThreshold() {
+    // 슬라이더 값을 읽어와 기울기 임계값 업데이트
+    const newThreshold = parseFloat(document.getElementById("slopeThreshold").value);
+    maxSlopeThreshold = newThreshold;
+    
+    // 화면에 현재 값 표시
+    document.getElementById("slopeValue").textContent = newThreshold.toFixed(1);
+    
+    console.log("Slope threshold updated to:", newThreshold);
 }
 
 function bezierSurface(u, v, controlPoints) {

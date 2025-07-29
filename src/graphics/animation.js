@@ -1,6 +1,7 @@
 // 애니메이션 경로 저장 변수
 let startUV = { u: 0.5, v: 0.5 };
 let endUV = { u: 0.5, v: 0.5 };
+let maxSlopeThreshold = 0.5; // 최대 허용 기울기 (조정 가능)
 
 function startMarkerAnimation(userClickPoint) {
     isAnimating = true;
@@ -35,23 +36,52 @@ function startAnimationLoop() {
 function updateMarkerAnimation() {
     if (!isAnimating) return;
 
-    // 애니메이션 진행
-    animationProgress += animationSpeed;
+    // 다음 애니메이션 진행값 계산
+    const nextProgress = animationProgress + animationSpeed;
 
-    if (animationProgress >= 1.0) {
+    if (nextProgress >= 1.0) {
         // 애니메이션 완료
         animationProgress = 1.0;
         isAnimating = false;
         currentMarkerPosition = [...targetMarkerPosition];
         createMarkerAtPoint(currentMarkerPosition);
     } else {
-        // UV 공간에서 직접 보간하여 곡면상의 점 계산
-        const surfacePoint = calculateUVInterpolationPath(animationProgress);
-        currentMarkerPosition = [...surfacePoint];
-        createMarkerAtPoint(currentMarkerPosition);
+        // 다음 위치 계산
+        const nextSurfacePoint = calculateUVInterpolationPath(nextProgress);
+        
+        // 곡률 변화량 체크
+        if (checkSlopeConstraint(currentMarkerPosition, nextSurfacePoint)) {
+            // 기울기가 허용 범위 내이면 이동
+            animationProgress = nextProgress;
+            currentMarkerPosition = [...nextSurfacePoint];
+            createMarkerAtPoint(currentMarkerPosition);
+        } else {
+            // 기울기가 너무 크면 애니메이션 중단
+            console.log("❌ Animation stopped: Slope too steep!");
+            isAnimating = false;
+        }
     }
 
     updateSurface();
+}
+
+// 기울기 제약 조건 체크 함수
+function checkSlopeConstraint(currentPos, nextPos) {
+    // 두 점 사이의 거리와 높이 차이 계산
+    const horizontalDistance = Math.sqrt(
+        Math.pow(nextPos[0] - currentPos[0], 2) + 
+        Math.pow(nextPos[2] - currentPos[2], 2)
+    );
+    const verticalDistance = Math.abs(nextPos[1] - currentPos[1]);
+    
+    // 기울기 계산 (수직거리 / 수평거리)
+    if (horizontalDistance === 0) return true; // 수평거리가 0이면 이동 허용
+    
+    const slope = verticalDistance / horizontalDistance;
+    
+    console.log(`Slope check: ${slope.toFixed(3)} (threshold: ${maxSlopeThreshold})`);
+    
+    return slope <= maxSlopeThreshold;
 }
 
 // UV 공간에서 직접 보간하여 곡면상의 점 계산
@@ -100,4 +130,13 @@ function findUVFromPoint(point) {
 // 선형 보간 함수
 function lerp(start, end, progress) {
     return start + (end - start) * progress;
+}
+
+// 두 점 사이의 거리 계산
+function calculateDistance(point1, point2) {
+    return Math.sqrt(
+        Math.pow(point2[0] - point1[0], 2) +
+        Math.pow(point2[1] - point1[1], 2) +
+        Math.pow(point2[2] - point1[2], 2)
+    );
 }
